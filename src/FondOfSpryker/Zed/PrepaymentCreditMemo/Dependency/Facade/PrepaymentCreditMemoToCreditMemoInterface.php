@@ -5,6 +5,7 @@ namespace FondOfSpryker\Zed\PrepaymentCreditMemo\Dependency\Facade;
 use Generated\Shared\Transfer\CreditMemoResponseTransfer;
 use Generated\Shared\Transfer\CreditMemoTransfer;
 use Orm\Zed\Sales\Persistence\SpySalesOrder;
+use Propel\Runtime\Collection\ObjectCollection;
 
 interface PrepaymentCreditMemoToCreditMemoInterface
 {
@@ -39,4 +40,11 @@ interface PrepaymentCreditMemoToCreditMemoInterface
      * @return \Orm\Zed\CreditMemo\Persistence\FosCreditMemo[]]
      */
     public function getCreditMemosBySalesOrderItems(array $salesOrderItems): array;
+
+    /**
+     * @param \Generated\Shared\Transfer\CreditMemoTransfer $creditMemoTransfer
+     *
+     * @return \Propel\Runtime\Collection\ObjectCollection|null
+     */
+    public function getSalesOrderItemsByCreditMemo(CreditMemoTransfer $creditMemoTransfer): ?ObjectCollection;
 }

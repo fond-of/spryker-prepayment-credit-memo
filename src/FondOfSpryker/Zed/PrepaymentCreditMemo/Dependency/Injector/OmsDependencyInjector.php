@@ -2,10 +2,8 @@
 
 namespace FondOfSpryker\Zed\PrepaymentCreditMemo\Dependency\Injector;
 
-use FondOfSpryker\Zed\PrepaymentCreditMemo\Communication\Plugin\Oms\Command\PayPlugin;
 use FondOfSpryker\Zed\PrepaymentCreditMemo\Communication\Plugin\Oms\Command\RefundPlugin;
 use FondOfSpryker\Zed\PrepaymentCreditMemo\Communication\Plugin\Oms\Condition\IsAuthorizedPlugin;
-use FondOfSpryker\Zed\PrepaymentCreditMemo\Communication\Plugin\Oms\Condition\IsPayedPlugin;
 use Spryker\Zed\Kernel\Container;
 use Spryker\Zed\Kernel\Dependency\Injector\AbstractDependencyInjector;
 use Spryker\Zed\Oms\Communication\Plugin\Oms\Command\CommandCollectionInterface;

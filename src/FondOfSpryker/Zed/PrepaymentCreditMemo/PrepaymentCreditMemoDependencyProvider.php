@@ -3,6 +3,7 @@
 namespace FondOfSpryker\Zed\PrepaymentCreditMemo;
 
 use FondOfSpryker\Zed\PrepaymentCreditMemo\Dependency\Facade\PrepaymentCreditMemoToCreditMemoBridge;
+use FondOfSpryker\Zed\PrepaymentCreditMemo\Dependency\Facade\PrepaymentCreditMemoToOmsBridge;
 use FondOfSpryker\Zed\PrepaymentCreditMemo\Dependency\Facade\PrepaymentCreditMemoToRefundBridge;
 use Spryker\Zed\Kernel\AbstractBundleDependencyProvider;
 use Spryker\Zed\Kernel\Container;
@@ -10,8 +11,8 @@ use Spryker\Zed\Kernel\Container;
 class PrepaymentCreditMemoDependencyProvider extends AbstractBundleDependencyProvider
 {
     public const FACADE_REFUND = 'refund facade';
-
     public const FACADE_CREDIT_MEMO = 'FACADE_CREDIT_MEMO';
+    public const FACADE_OMS = 'FACADE_OMS';
 
     /**
      * @param \Spryker\Zed\Kernel\Container $container
@@ -22,6 +23,21 @@ class PrepaymentCreditMemoDependencyProvider extends AbstractBundleDependencyPro
     {
         $container = $this->addRefundFacade($container);
         $container = $this->addCreditMemoFacade($container);
+
+        return $container;
+    }
+
+    /**
+     * @param \Spryker\Zed\Kernel\Container $container
+     *
+     * @return \Spryker\Zed\Kernel\Container
+     */
+    public function provideCommunicationLayerDependencies(Container $container)
+    {
+        $container = parent::provideCommunicationLayerDependencies($container);
+        $container = $this->addCreditMemoFacade($container);
+        $container = $this->addRefundFacade($container);
+        $container = $this->addOmsFacade($container);
 
         return $container;
     }
@@ -49,6 +65,20 @@ class PrepaymentCreditMemoDependencyProvider extends AbstractBundleDependencyPro
     {
         $container[self::FACADE_CREDIT_MEMO] = function (Container $container) {
             return new PrepaymentCreditMemoToCreditMemoBridge($container->getLocator()->creditMemo()->facade());
+        };
+
+        return $container;
+    }
+
+    /**
+     * @param \Spryker\Zed\Kernel\Container $container
+     *
+     * @return \Spryker\Zed\Kernel\Container
+     */
+    protected function addOmsFacade(Container $container)
+    {
+        $container[self::FACADE_OMS] = function (Container $container) {
+            return new PrepaymentCreditMemoToOmsBridge($container->getLocator()->oms()->facade());
         };
 
         return $container;

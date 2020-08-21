@@ -2,6 +2,9 @@
 
 namespace FondOfSpryker\Zed\PrepaymentCreditMemo\Communication;
 
+use FondOfSpryker\Zed\PrepaymentCreditMemo\Dependency\Facade\PrepaymentCreditMemoToCreditMemoInterface;
+use FondOfSpryker\Zed\PrepaymentCreditMemo\Dependency\Facade\PrepaymentCreditMemoToOmsInterface;
+use FondOfSpryker\Zed\PrepaymentCreditMemo\PrepaymentCreditMemoDependencyProvider;
 use Spryker\Zed\Kernel\Communication\AbstractCommunicationFactory;
 
 /**
@@ -10,4 +13,19 @@ use Spryker\Zed\Kernel\Communication\AbstractCommunicationFactory;
  */
 class PrepaymentCreditMemoCommunicationFactory extends AbstractCommunicationFactory
 {
+    /**
+     * @return \FondOfSpryker\Zed\PrepaymentCreditMemo\Dependency\Facade\PrepaymentCreditMemoToOmsInterface
+     */
+    public function getOmsFacade(): PrepaymentCreditMemoToOmsInterface
+    {
+        return $this->getProvidedDependency(PrepaymentCreditMemoDependencyProvider::FACADE_OMS);
+    }
+
+    /**
+     * @return \FondOfSpryker\Zed\PrepaymentCreditMemo\Dependency\Facade\PrepaymentCreditMemoToCreditMemoInterface
+     */
+    public function getCreditMemoFacade(): PrepaymentCreditMemoToCreditMemoInterface
+    {
+        return $this->getProvidedDependency(PrepaymentCreditMemoDependencyProvider::FACADE_CREDIT_MEMO);
+    }
 }
