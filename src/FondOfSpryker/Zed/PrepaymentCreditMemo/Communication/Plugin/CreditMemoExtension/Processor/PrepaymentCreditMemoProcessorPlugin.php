@@ -4,8 +4,11 @@ namespace FondOfSpryker\Zed\PrepaymentCreditMemo\Communication\Plugin\CreditMemo
 
 use Exception;
 use FondOfSpryker\Zed\CreditMemoExtension\Dependency\Plugin\CreditMemoProcessorPluginInterface;
+use FondOfSpryker\Zed\PayoneCreditMemo\Exception\NoRefundableItemsFoundException;
 use Generated\Shared\Transfer\CreditMemoProcessorStatusTransfer;
 use Generated\Shared\Transfer\CreditMemoTransfer;
+use Propel\Runtime\Collection\ObjectCollection;
+use Spryker\Shared\Log\LoggerTrait;
 use Spryker\Zed\Kernel\Communication\AbstractPlugin;
 
 /**
@@ -15,53 +18,40 @@ use Spryker\Zed\Kernel\Communication\AbstractPlugin;
  */
 class PrepaymentCreditMemoProcessorPlugin extends AbstractPlugin implements CreditMemoProcessorPluginInterface
 {
+    use LoggerTrait;
+
     public const NAME = 'PrepaymentCreditMemoProcessorPlugin';
-
     public const LISTENING_PAYMENT_PROVIDER = 'Prepayment';
-
     public const LISTENING_PAYMENT_METHOD = 'prepayment';
 
     /**
      * @param \Generated\Shared\Transfer\CreditMemoTransfer $creditMemoTransfer
      * @param \Generated\Shared\Transfer\CreditMemoProcessorStatusTransfer $statusResponse
      *
-     * @throws \Exception
-     *
      * @return \Generated\Shared\Transfer\CreditMemoProcessorStatusTransfer|null
      */
-    public function process(CreditMemoTransfer $creditMemoTransfer, CreditMemoProcessorStatusTransfer $statusResponse): ?CreditMemoProcessorStatusTransfer
-    {
-        $statusResponse->setWasRefunded(false);
+    public function process(
+        CreditMemoTransfer $creditMemoTransfer,
+        CreditMemoProcessorStatusTransfer $statusResponse
+    ): ?CreditMemoProcessorStatusTransfer {
         if ($this->canProcess($creditMemoTransfer) === true) {
             try {
-                $creditMemoTransfer->setProcessed(1);
-                $creditMemoTransfer->setProcessedAt(time());
+                $items = $this->resolveItemsToRefund($creditMemoTransfer);
+                $status = $this->getFactory()->getOmsFacade()->triggerEvent(
+                    CreditMemoProcessorPluginInterface::EVENT_NAME,
+                    $items,
+                    []
+                );
+                $statusResponse->setMessage('internal oms failure');
 
-                $wasRefunded = $this->getFacade()->refundCreditMemo($creditMemoTransfer);
-                $statusResponse->setWasRefunded($wasRefunded);
-
-                if ($wasRefunded === false) {
-                    throw new Exception(sprintf('Nothing was refunded for credit memo with id %s', $creditMemoTransfer->getIdCreditMemo()));
-                }
-
-                $response = $this->getFacade()->updateCreditMemo($creditMemoTransfer);
-
-                if ($response->getIsSuccess()) {
+                if ($status !== null) {
+                    $statusResponse->setMessage('');
                     $statusResponse->setSuccess(true);
-                    $statusResponse->setMessage(sprintf('Processed by %s', $this->getName()));
-                }
-
-                if ($response->getIsSuccess() === false && $response->getErrors()->count() > 0) {
-                    $statusResponse->setSuccess(false);
-                    $errorMessages = '';
-                    foreach ($response->getErrors() as $error) {
-                        $errorMessages = sprintf('%s | %s', $errorMessages, $error->getMessage());
-                    }
-                    $statusResponse->setMessage(sprintf('Could not be processed by %s. Errors: %s', $this->getName(), $errorMessages));
                 }
             } catch (Exception $exception) {
+                $statusResponse->setMessage($exception->getMessage());
                 $statusResponse->setSuccess(false);
-                $statusResponse->setMessage(sprintf('Exception:%3$sMessage:%3$s%1$s%3$sTrace:%3$s%2$s', $exception->getMessage(), $exception->getTraceAsString(), PHP_EOL));
+                $this->getLogger()->error($exception->getMessage(), $exception->getTrace());
             }
         }
 
@@ -88,5 +78,27 @@ class PrepaymentCreditMemoProcessorPlugin extends AbstractPlugin implements Cred
         return $salesPaymentMethodType !== null
             && $salesPaymentMethodType->getPaymentMethod() === static::LISTENING_PAYMENT_METHOD
             && $salesPaymentMethodType->getPaymentProvider() === static::LISTENING_PAYMENT_PROVIDER;
+    }
+
+    /**
+     * @param \Generated\Shared\Transfer\CreditMemoTransfer $creditMemoTransfer
+     *
+     * @throws \FondOfSpryker\Zed\PayoneCreditMemo\Exception\NoRefundableItemsFoundException
+     *
+     * @return \Propel\Runtime\Collection\ObjectCollection
+     */
+    protected function resolveItemsToRefund(CreditMemoTransfer $creditMemoTransfer): ObjectCollection
+    {
+        $items = $this->getFactory()->getCreditMemoFacade()->getSalesOrderItemsByCreditMemo($creditMemoTransfer);
+
+        if ($items === null) {
+            throw new NoRefundableItemsFoundException(sprintf(
+                'No refundable items found for CreditMemo with id %s and order reference %s',
+                $creditMemoTransfer->getIdCreditMemo(),
+                $creditMemoTransfer->getOrderReference()
+            ));
+        }
+
+        return $items;
     }
 }
